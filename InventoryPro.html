@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>InventoryPro – Smart Inventory Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: #f0f4f9; color: #1a1a2e; }
+
+    :root {
+      --primary:   #2563eb;
+      --danger:    #dc2626;
+      --success:   #16a34a;
+      --warning:   #d97706;
+      --dark:      #1a1a2e;
+      --sidebar-w: 230px;
+      --radius:    12px;
+    }
+
+    /* ---- LOGIN ---- */
+    #login-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    }
+    .login-card {
+      background: #fff; border-radius: 20px; padding: 44px 40px; width: 380px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45); display: flex; flex-direction: column; gap: 16px;
+    }
+    .login-logo { display: flex; align-items: center; gap: 12px; }
+    .login-logo .icon { font-size: 36px; }
+    .login-logo .brand { font-size: 26px; font-weight: 800; color: var(--dark); }
+    .login-sub { color: #888; font-size: 14px; }
+    .hint-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #1d4ed8; }
+
+    /* ---- LAYOUT ---- */
+    #app { display: none; min-height: 100vh; }
+    .layout { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar { width: var(--sidebar-w); background: var(--dark); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+    .sidebar-brand { color: #fff; font-size: 18px; font-weight: 800; padding: 28px 22px 24px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .sidebar-brand span { opacity: 0.5; font-weight: 400; }
+    .nav-btn { display: flex; align-items: center; gap: 10px; background: none; border: none; color: #94a3b8; text-align: left; padding: 13px 22px; font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; width: 100%; border-left: 3px solid transparent; }
+    .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .nav-btn.active { background: rgba(37,99,235,0.2); color: #fff; border-left: 3px solid var(--primary); font-weight: 700; }
+    .nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+    .logout-btn { margin-top: auto; background: none; border: none; color: #f87171; padding: 16px 22px; font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; text-align: left; border-top: 1px solid rgba(255,255,255,0.07); }
+
+    /* MAIN */
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 30px 36px; min-height: 100vh; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .page-title { font-size: 22px; font-weight: 800; color: var(--dark); }
+    .admin-badge { background: #dbeafe; color: var(--primary); padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+
+    /* STAT CARDS */
+    .stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+    .stat-card { background: #fff; border-radius: var(--radius); padding: 20px 22px; display: flex; align-items: center; gap: 16px; flex: 1 1 160px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-top: 4px solid #ccc; }
+    .stat-icon { font-size: 30px; }
+    .stat-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 22px; font-weight: 800; margin-top: 2px; }
+
+    /* SECTION */
+    .section { background: #fff; border-radius: var(--radius); padding: 26px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 24px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--dark); }
+
+    /* TABLES */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    thead tr { background: #f8fafc; }
+    th { padding: 11px 14px; text-align: left; font-weight: 700; color: #555; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    td { padding: 11px 14px; color: #333; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+
+    /* BADGES */
+    .badge { background: #dbeafe; color: var(--primary); padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+    .badge.grocery  { background: #dcfce7; color: #15803d; }
+    .badge.medicine { background: #fce7f3; color: #be185d; }
+    .badge.hardware { background: #fef3c7; color: #b45309; }
+    .badge.other    { background: #f1f5f9; color: #475569; }
+    .alert-tag { display: inline-block; background: #fee2e2; color: var(--danger); padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; margin-right: 4px; }
+    .alert-tag.expiry { background: #fef3c7; color: var(--warning); }
+
+    /* BUTTONS */
+    .btn-primary { padding: 11px 20px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary.full { width: 100%; padding: 12px; font-size: 15px; }
+    .btn-cancel { padding: 11px 20px; background: #e2e8f0; color: #333; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    .btn-cancel.full { width: 100%; padding: 12px; font-size: 15px; }
+
+    /* Table action buttons */
+    .btn-sell    { background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-right: 3px; }
+    .btn-sell:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-restock { background: #dcfce7; color: var(--success); border: none; border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-right: 3px; }
+    .btn-restock:hover { background: #bbf7d0; }
+    .btn-delete  { background: #fee2e2; color: var(--danger); border: none; border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-delete:hover  { background: #fecaca; }
+    .btn-add { background: var(--success); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-add:hover { background: #15803d; }
+
+    /* FORMS */
+    .input { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; transition: border 0.15s; }
+    .input:focus { border-color: var(--primary); }
+    label { font-size: 13px; font-weight: 700; color: #555; display: block; margin-bottom: 6px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-full { grid-column: 1 / -1; }
+    .field { margin-bottom: 14px; }
+
+    /* ALERTS */
+    .alert-item { background: #fee2e2; border-left: 4px solid var(--danger); padding: 11px 16px; border-radius: 6px; margin-bottom: 10px; font-size: 13.5px; }
+    .alert-item.expiry { background: #fef3c7; border-left: 4px solid var(--warning); }
+
+    /* MODALS */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .modal { background: #fff; border-radius: 18px; padding: 32px 34px; width: 460px; box-shadow: 0 24px 80px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+    .modal.sm { width: 380px; }
+    .modal h3 { font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--dark); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .profit-preview { display: flex; justify-content: space-between; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 8px; margin: 14px 0; font-size: 14px; }
+    .restock-info { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 14px; }
+    .delete-confirm { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 10px; padding: 16px; margin-bottom: 16px; font-size: 14px; color: #7f1d1d; line-height: 1.6; }
+
+    /* MISC */
+    .stock-low  { color: var(--danger);  font-weight: 700; }
+    .stock-good { color: var(--success); font-weight: 700; }
+    .profit { color: var(--success); font-weight: 700; }
+    .err-msg { background: #fee2e2; color: var(--danger); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 6px; }
+    .hidden { display: none !important; }
+    .tab-page { display: none; }
+    .tab-page.active { display: block; }
+    .no-alerts { text-align: center; padding: 40px; color: #aaa; font-size: 15px; }
+    .empty-row td { text-align: center; padding: 30px; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     LOGIN PAGE
+     In real MERN: POST /api/auth/login returns JWT token
+============================================================ -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="icon">📦</span>
+      <span class="brand">InventoryPro</span>
+    </div>
+    <p class="login-sub">Smart Inventory for Small Businesses</p>
+    <div class="hint-box">
+      📧 Email: <strong>admin@inventorypro.com</strong><br/>
+      🔑 Password: <strong>admin123</strong>
+    </div>
+    <input class="input" id="email-input" type="email" placeholder="Email address" />
+    <input class="input" id="pass-input"  type="password" placeholder="Password" />
+    <p class="err-msg hidden" id="login-err">❌ Invalid credentials. Please try again.</p>
+    <button class="btn-primary full" onclick="handleLogin()">Login as Admin</button>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     MAIN APP (shown after login)
+============================================================ -->
+<div id="app">
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">📦 Inventory<span>Pro</span></div>
+      <button class="nav-btn active" onclick="switchTab('dashboard', this)">📊 Dashboard</button>
+      <button class="nav-btn"        onclick="switchTab('products',  this)">🗂 Products</button>
+      <button class="nav-btn"        onclick="switchTab('sales',     this)">🧾 Sales History</button>
+      <button class="nav-btn"        onclick="switchTab('alerts',    this)">
+        🔔 Alerts <span class="nav-badge hidden" id="alert-count">0</span>
+      </button>
+      <button class="logout-btn" onclick="handleLogout()">🚪 Logout</button>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      <div class="top-bar">
+        <h1 class="page-title" id="page-title">📊 Dashboard</h1>
+        <span class="admin-badge">👤 Admin</span>
+      </div>
+
+      <!-- TAB: DASHBOARD -->
+      <div class="tab-page active" id="tab-dashboard">
+        <div class="stats-row" id="stats-row"></div>
+        <div class="section" id="dashboard-alerts" style="display:none"></div>
+        <div class="section">
+          <h2 class="section-title">🧾 Recent Sales</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Product</th><th>Qty</th><th>Revenue</th><th>Profit</th><th>Date</th></tr></thead>
+              <tbody id="recent-sales-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: PRODUCTS — Admin can Add, Restock, Delete, Sell -->
+      <div class="tab-page" id="tab-products">
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">🗂 Product Inventory</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <!-- Search box filters the table live -->
+              <input class="input" style="width:200px;margin:0" placeholder="🔍 Search product..." oninput="filterProducts(this.value)" />
+              <!-- Opens the Add Product form modal -->
+              <button class="btn-add" onclick="openAddModal()">＋ Add New Product</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Product</th><th>Category</th><th>Buy ₹</th><th>Sell ₹</th>
+                <th>Stock</th><th>Reorder At</th><th>Expiry</th><th>Alerts</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="products-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: SALES HISTORY -->
+      <div class="tab-page" id="tab-sales">
+        <div class="section">
+          <h2 class="section-title">🧾 All Sales</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Product</th><th>Qty Sold</th><th>Total Revenue</th><th>Profit</th><th>Date</th></tr></thead>
+              <tbody id="all-sales-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: ALERTS -->
+      <div class="tab-page" id="tab-alerts">
+        <div class="section">
+          <h2 class="section-title">🔔 Active Alerts</h2>
+          <div id="alerts-list"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     MODAL 1: SELL PRODUCT
+     In real MERN: POST /api/sales
+     Deducts stock, records profit
+============================================================ -->
+<div class="modal-backdrop hidden" id="sell-modal">
+  <div class="modal sm">
+    <h3>🛒 Record Sale</h3>
+    <p style="color:#555;margin-bottom:6px">Product: <strong id="sell-product-name"></strong></p>
+    <p style="color:#555;margin-bottom:16px">Available Stock: <strong id="sell-stock"></strong> units</p>
+    <div class="field">
+      <label>Quantity to Sell</label>
+      <input class="input" type="number" id="sell-qty" min="1" value="1" oninput="updateProfitPreview()" />
+    </div>
+    <div class="profit-preview">
+      <span>Revenue: <strong id="sell-revenue">₹0</strong></span>
+      <span style="color:var(--success)">Profit: <strong id="sell-profit">₹0</strong></span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary full" onclick="confirmSale()">✅ Confirm Sale</button>
+      <button class="btn-cancel full"  onclick="closeModal('sell-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     MODAL 2: ADD NEW PRODUCT
+     In real MERN: POST /api/products → new MongoDB document
+============================================================ -->
+<div class="modal-backdrop hidden" id="add-modal">
+  <div class="modal">
+    <h3>➕ Add New Product</h3>
+    <div class="form-grid">
+
+      <!-- Product name (full width) -->
+      <div class="form-full field">
+        <label>Product Name *</label>
+        <input class="input" id="add-name" placeholder="e.g. Toor Dal 1kg" />
+      </div>
+
+      <!-- Category select -->
+      <div class="field">
+        <label>Category *</label>
+        <select class="input" id="add-category">
+          <option value="Grocery">Grocery</option>
+          <option value="Medicine">Medicine</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <!-- Initial stock count -->
+      <div class="field">
+        <label>Initial Stock Qty *</label>
+        <input class="input" type="number" id="add-quantity" min="0" placeholder="e.g. 50" />
+      </div>
+
+      <!-- Cost price paid to supplier -->
+      <div class="field">
+        <label>Purchase Price ₹ *</label>
+        <input class="input" type="number" id="add-purchase" min="0" placeholder="e.g. 90" />
+      </div>
+
+      <!-- Price charged to customer -->
+      <div class="field">
+        <label>Selling Price ₹ *</label>
+        <input class="input" type="number" id="add-selling" min="0" placeholder="e.g. 120" />
+      </div>
+
+      <!-- Stock level that triggers low-stock alert -->
+      <div class="field">
+        <label>Reorder Level *</label>
+        <input class="input" type="number" id="add-reorder" min="0" placeholder="e.g. 10" />
+      </div>
+
+      <!-- Optional: only for perishables / medicines -->
+      <div class="form-full field">
+        <label>Expiry Date <span style="font-weight:400;color:#aaa">(optional)</span></label>
+        <input class="input" type="date" id="add-expiry" />
+      </div>
+    </div>
+
+    <p class="err-msg hidden" id="add-err">⚠️ Please fill all required fields with valid values.</p>
+    <div class="modal-actions">
+      <button class="btn-primary full" onclick="confirmAddProduct()">✅ Add Product</button>
+      <button class="btn-cancel full"  onclick="closeModal('add-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     MODAL 3: RESTOCK (ADD MORE QUANTITY)
+     In real MERN: PATCH /api/products/:id  →  $inc quantity
+============================================================ -->
+<div class="modal-backdrop hidden" id="restock-modal">
+  <div class="modal sm">
+    <h3>📦 Restock Product</h3>
+    <div class="restock-info">
+      Product: <strong id="restock-name"></strong><br/>
+      Current Stock: <strong id="restock-current"></strong> units
+    </div>
+    <div class="field">
+      <label>Quantity to Add *</label>
+      <input class="input" type="number" id="restock-qty" min="1" placeholder="e.g. 100" />
+    </div>
+    <p class="err-msg hidden" id="restock-err">⚠️ Please enter a valid quantity (minimum 1).</p>
+    <div class="modal-actions">
+      <button class="btn-primary full" onclick="confirmRestock()">✅ Add Stock</button>
+      <button class="btn-cancel full"  onclick="closeModal('restock-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     MODAL 4: DELETE PRODUCT
+     In real MERN: DELETE /api/products/:id → MongoDB deleteOne
+============================================================ -->
+<div class="modal-backdrop hidden" id="delete-modal">
+  <div class="modal sm">
+    <h3>🗑 Delete Product</h3>
+    <div class="delete-confirm">
+      ⚠️ Are you sure you want to permanently delete<br/>
+      <strong id="delete-name"></strong>?<br/><br/>
+      This cannot be undone. Sales history will be kept.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary full" style="background:var(--danger)" onclick="confirmDelete()">🗑 Yes, Delete It</button>
+      <button class="btn-cancel full" onclick="closeModal('delete-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ============================================================
+// SECTION 1: DATA
+// In real MERN: fetched from MongoDB via Express REST API
+// axios.get('/api/products') and axios.get('/api/sales')
+// ============================================================
+let products = [
+  { id:1, name:"Basmati Rice 5kg",  category:"Grocery",  purchasePrice:280, sellingPrice:350, quantity:5,  reorderLevel:10, expiryDate:"2026-04-01" },
+  { id:2, name:"Paracetamol 500mg", category:"Medicine", purchasePrice:12,  sellingPrice:20,  quantity:80, reorderLevel:20, expiryDate:"2026-03-14" },
+  { id:3, name:"Toor Dal 1kg",      category:"Grocery",  purchasePrice:90,  sellingPrice:120, quantity:30, reorderLevel:15, expiryDate:"2026-12-31" },
+  { id:4, name:"Cement Bag 50kg",   category:"Hardware", purchasePrice:350, sellingPrice:420, quantity:3,  reorderLevel:5,  expiryDate:null },
+  { id:5, name:"Amoxicillin 250mg", category:"Medicine", purchasePrice:45,  sellingPrice:75,  quantity:60, reorderLevel:25, expiryDate:"2026-03-16" },
+  { id:6, name:"Sunflower Oil 1L",  category:"Grocery",  purchasePrice:110, sellingPrice:145, quantity:25, reorderLevel:12, expiryDate:"2026-09-15" },
+];
+
+let sales = [
+  { id:1, product:"Basmati Rice 5kg",  qty:4,  total:1400, profit:280, date:"2026-03-09" },
+  { id:2, product:"Paracetamol 500mg", qty:10, total:200,  profit:80,  date:"2026-03-09" },
+  { id:3, product:"Toor Dal 1kg",      qty:8,  total:960,  profit:240, date:"2026-03-08" },
+];
+
+// Tracks which product the admin is currently acting on
+let currentProduct = null;
+
+// Auto-increments to give each new product a unique ID
+let nextId = 10;
+
+
+// ============================================================
+// SECTION 2: UTILITY FUNCTIONS
+// ============================================================
+
+// Low stock check: triggers ⚠ alert
+const isLowStock = p => p.quantity <= p.reorderLevel;
+
+// Expiry check: warns if expiry is within 7 days
+const isExpiringSoon = p => {
+  if (!p.expiryDate) return false;
+  const diff = (new Date(p.expiryDate) - new Date()) / (1000*60*60*24);
+  return diff <= 7 && diff >= 0;
+};
+
+// Format number as Indian Rupee: 1400 → ₹1,400
+const toINR = n => `₹${Number(n).toLocaleString('en-IN')}`;
+
+
+// ============================================================
+// SECTION 3: LOGIN / LOGOUT
+// In real MERN: POST /api/auth/login → returns JWT token
+// JWT stored in localStorage, sent as Authorization header
+// ============================================================
+function handleLogin() {
+  const email = document.getElementById('email-input').value;
+  const pass  = document.getElementById('pass-input').value;
+
+  if (email === 'admin@inventorypro.com' && pass === 'admin123') {
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderAll(); // Load all UI after login
+  } else {
+    document.getElementById('login-err').classList.remove('hidden');
+  }
+}
+
+document.getElementById('pass-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+
+function handleLogout() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('email-input').value = '';
+  document.getElementById('pass-input').value  = '';
+  document.getElementById('login-err').classList.add('hidden');
+}
+
+
+// ============================================================
+// SECTION 4: TAB NAVIGATION
+// Controls which section (Dashboard/Products/Sales/Alerts) is shown
+// Re-renders the target tab's content every time it's opened
+// so alerts/stats always reflect the latest data
+// ============================================================
+const TAB_TITLES = {
+  dashboard: '📊 Dashboard',
+  products:  '🗂 Products',
+  sales:     '🧾 Sales History',
+  alerts:    '🔔 Alerts',
+};
+
+function switchTab(tabId, btn) {
+  // Hide all tab pages and deactivate all nav buttons
+  document.querySelectorAll('.tab-page').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  // Show the selected tab and mark its button active
+  document.getElementById('tab-' + tabId).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('page-title').textContent = TAB_TITLES[tabId];
+
+  // Re-render the tab content fresh every time it is opened
+  // This ensures alerts, products, and sales always show up-to-date data
+  if (tabId === 'alerts')    renderAlerts();
+  if (tabId === 'dashboard') renderDashboard();
+  if (tabId === 'products')  renderProducts();
+  if (tabId === 'sales')     renderSales();
+}
+
+
+// ============================================================
+// SECTION 5: GENERIC MODAL CLOSE
+// Pass modal ID to close it; resets currentProduct
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  currentProduct = null;
+}
+
+// Clicking backdrop (outside modal card) also closes it
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-backdrop')) {
+    e.target.classList.add('hidden');
+    currentProduct = null;
+  }
+});
+
+
+// ============================================================
+// SECTION 6: RENDER DASHBOARD
+// Stat cards + alert panel + recent sales
+// In MERN: aggregated from GET /api/products + GET /api/sales
+// ============================================================
+function renderDashboard() {
+  const totalRevenue = sales.reduce((s, x) => s + x.total, 0);
+  const totalProfit  = sales.reduce((s, x) => s + x.profit, 0);
+  const lowCount     = products.filter(isLowStock).length;
+  const expCount     = products.filter(isExpiringSoon).length;
+
+  // Build 5 stat cards
+  document.getElementById('stats-row').innerHTML = [
+    { icon:'📦', label:'Total Products',  value: products.length,     color:'#2563eb' },
+    { icon:'⚠️', label:'Low Stock Items', value: lowCount,            color:'#dc2626' },
+    { icon:'💰', label:'Total Revenue',   value: toINR(totalRevenue), color:'#16a34a' },
+    { icon:'📈', label:'Total Profit',    value: toINR(totalProfit),  color:'#7c3aed' },
+    { icon:'🕒', label:'Expiring Soon',   value: expCount,            color:'#d97706' },
+  ].map(c => `
+    <div class="stat-card" style="border-top-color:${c.color}">
+      <span class="stat-icon">${c.icon}</span>
+      <div>
+        <p class="stat-label">${c.label}</p>
+        <p class="stat-value" style="color:${c.color}">${c.value}</p>
+      </div>
+    </div>
+  `).join('');
+
+  // Alerts section on dashboard (shown only if there are alerts)
+  const alertBox = document.getElementById('dashboard-alerts');
+  const low = products.filter(isLowStock);
+  const exp = products.filter(isExpiringSoon);
+  const alertHtml = [
+    ...low.map(p => `<div class="alert-item">⚠️ <strong>${p.name}</strong> — Only ${p.quantity} units left (Reorder at ${p.reorderLevel})</div>`),
+    ...exp.map(p => `<div class="alert-item expiry">🕒 <strong>${p.name}</strong> — Expires on ${p.expiryDate}</div>`),
+  ].join('');
+
+  if (alertHtml) {
+    alertBox.style.display = 'block';
+    alertBox.innerHTML = `<h2 class="section-title" style="margin-bottom:14px">🔔 Active Alerts</h2>${alertHtml}`;
+  } else {
+    alertBox.style.display = 'none';
+  }
+
+  // Recent 3 sales
+  document.getElementById('recent-sales-body').innerHTML =
+    sales.length === 0
+      ? `<tr class="empty-row"><td colspan="5">No sales recorded yet.</td></tr>`
+      : sales.slice(0,3).map(s => `
+          <tr>
+            <td>${s.product}</td><td>${s.qty}</td>
+            <td>${toINR(s.total)}</td>
+            <td class="profit">${toINR(s.profit)}</td>
+            <td>${s.date}</td>
+          </tr>`).join('');
+}
+
+
+// ============================================================
+// SECTION 7: RENDER PRODUCTS TABLE
+// Each row has 3 action buttons: Sell | +Stock | 🗑 Delete
+// In MERN: GET /api/products
+// ============================================================
+function renderProducts(filter='') {
+  const filtered = products.filter(p =>
+    p.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  document.getElementById('products-body').innerHTML = filtered.length === 0
+    ? `<tr class="empty-row"><td colspan="9">No products found.</td></tr>`
+    : filtered.map(p => {
+        const cat        = p.category.toLowerCase();
+        const stockClass = isLowStock(p) ? 'stock-low' : 'stock-good';
+        const expStyle   = isExpiringSoon(p) ? 'color:var(--warning);font-weight:700' : '';
+        const tags = [
+          isLowStock(p)     ? `<span class="alert-tag">⚠ Low Stock</span>` : '',
+          isExpiringSoon(p) ? `<span class="alert-tag expiry">🕒 Expiring</span>` : '',
+        ].join('');
+
+        return `
+          <tr>
+            <td><strong>${p.name}</strong></td>
+            <td><span class="badge ${cat}">${p.category}</span></td>
+            <td>${toINR(p.purchasePrice)}</td>
+            <td>${toINR(p.sellingPrice)}</td>
+            <td class="${stockClass}">${p.quantity}</td>
+            <td>${p.reorderLevel}</td>
+            <td style="${expStyle}">${p.expiryDate || 'N/A'}</td>
+            <td>${tags || '—'}</td>
+            <td>
+              <!-- Sell: deducts stock, records sale -->
+              <button class="btn-sell"    onclick="openSellModal(${p.id})"    ${p.quantity===0?'disabled':''}>Sell</button>
+              <!-- Restock: adds quantity to existing product -->
+              <button class="btn-restock" onclick="openRestockModal(${p.id})">+Stock</button>
+              <!-- Delete: removes product permanently -->
+              <button class="btn-delete"  onclick="openDeleteModal(${p.id})">🗑</button>
+            </td>
+          </tr>`;
+      }).join('');
+}
+
+// Called on every keystroke in the search box
+function filterProducts(query) { renderProducts(query); }
+
+
+// ============================================================
+// SECTION 8: RENDER SALES HISTORY
+// Full list of all sales recorded
+// In MERN: GET /api/sales
+// ============================================================
+function renderSales() {
+  document.getElementById('all-sales-body').innerHTML =
+    sales.length === 0
+      ? `<tr class="empty-row"><td colspan="5">No sales recorded yet.</td></tr>`
+      : sales.map(s => `
+          <tr>
+            <td>${s.product}</td><td>${s.qty}</td>
+            <td>${toINR(s.total)}</td>
+            <td class="profit">${toINR(s.profit)}</td>
+            <td>${s.date}</td>
+          </tr>`).join('');
+}
+
+
+// ============================================================
+// SECTION 9: RENDER ALERTS
+// Clears old content and rebuilds alerts fresh every call.
+// Called on: login, every data change, and every time the
+// Alerts tab is opened — so it is always up to date.
+// ============================================================
+function renderAlerts() {
+  const low = products.filter(isLowStock);
+  const exp = products.filter(isExpiringSoon);
+
+  // Clear old alerts first, then rebuild
+  const list = document.getElementById('alerts-list');
+  list.innerHTML = '';
+
+  if (low.length === 0 && exp.length === 0) {
+    // No alerts at all — show green success message
+    list.innerHTML = '<p class="no-alerts">✅ All stock levels are fine. No alerts right now.</p>';
+  } else {
+    // Low stock alerts (red)
+    low.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'alert-item';
+      div.innerHTML = `⚠️ <strong>${p.name}</strong> — Only <strong>${p.quantity}</strong> units left. Reorder level is ${p.reorderLevel}.`;
+      list.appendChild(div);
+    });
+
+    // Expiry alerts (yellow/orange)
+    exp.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'alert-item expiry';
+      div.innerHTML = `🕒 <strong>${p.name}</strong> — Expires on <strong>${p.expiryDate}</strong>`;
+      list.appendChild(div);
+    });
+  }
+
+  // Update sidebar badge count
+  const count = low.length + exp.length;
+  const badge = document.getElementById('alert-count');
+  badge.textContent = count;
+  badge.classList.toggle('hidden', count === 0);
+}
+
+
+// ============================================================
+// SECTION 10: SELL MODAL LOGIC
+// Opens on "Sell" button → records sale + deducts stock
+// In real MERN: POST /api/sales
+// Profit = (sellingPrice - purchasePrice) × qty
+// ============================================================
+function openSellModal(productId) {
+  currentProduct = products.find(p => p.id === productId);
+  document.getElementById('sell-product-name').textContent = currentProduct.name;
+  document.getElementById('sell-stock').textContent        = currentProduct.quantity;
+  document.getElementById('sell-qty').value = 1;
+  document.getElementById('sell-qty').max   = currentProduct.quantity;
+  updateProfitPreview();
+  document.getElementById('sell-modal').classList.remove('hidden');
+}
+
+// Live revenue/profit preview as quantity input changes
+function updateProfitPreview() {
+  if (!currentProduct) return;
+  const qty = parseInt(document.getElementById('sell-qty').value) || 1;
+  document.getElementById('sell-revenue').textContent = toINR(currentProduct.sellingPrice * qty);
+  document.getElementById('sell-profit').textContent  = toINR((currentProduct.sellingPrice - currentProduct.purchasePrice) * qty);
+}
+
+// Confirms the sale: updates stock + records in sales list
+function confirmSale() {
+  const qty = parseInt(document.getElementById('sell-qty').value);
+  if (!qty || qty < 1 || qty > currentProduct.quantity) return;
+
+  // Deduct stock (simulates MongoDB: { $inc: { quantity: -qty } })
+  products = products.map(p =>
+    p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p
+  );
+
+  // Record sale (simulates POST to Sales collection)
+  sales = [{
+    id:      sales.length + 1,
+    product: currentProduct.name,
+    qty,
+    total:   currentProduct.sellingPrice * qty,
+    profit:  (currentProduct.sellingPrice - currentProduct.purchasePrice) * qty,
+    date:    new Date().toISOString().split('T')[0],
+  }, ...sales];
+
+  closeModal('sell-modal');
+  renderAll();
+}
+
+
+// ============================================================
+// SECTION 11: ADD PRODUCT MODAL
+// Admin fills form → new product added to list
+// In real MERN: POST /api/products → MongoDB insertOne
+// ============================================================
+function openAddModal() {
+  // Clear form fields before opening
+  ['add-name','add-quantity','add-purchase','add-selling','add-reorder','add-expiry'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('add-category').value = 'Grocery';
+  document.getElementById('add-err').classList.add('hidden');
+  document.getElementById('add-modal').classList.remove('hidden');
+}
+
+function confirmAddProduct() {
+  const name     = document.getElementById('add-name').value.trim();
+  const category = document.getElementById('add-category').value;
+  const quantity = parseInt(document.getElementById('add-quantity').value);
+  const purchase = parseFloat(document.getElementById('add-purchase').value);
+  const selling  = parseFloat(document.getElementById('add-selling').value);
+  const reorder  = parseInt(document.getElementById('add-reorder').value);
+  const expiry   = document.getElementById('add-expiry').value || null;
+
+  // Validate all required fields
+  if (!name || isNaN(quantity) || quantity < 0 || isNaN(purchase) || isNaN(selling) || isNaN(reorder)) {
+    document.getElementById('add-err').classList.remove('hidden');
+    return;
+  }
+
+  // Add to products array (simulates MongoDB insertOne)
+  products = [...products, {
+    id: nextId++,
+    name, category,
+    purchasePrice: purchase,
+    sellingPrice:  selling,
+    quantity, reorderLevel: reorder,
+    expiryDate: expiry,
+  }];
+
+  closeModal('add-modal');
+  renderAll();
+}
+
+
+// ============================================================
+// SECTION 12: RESTOCK MODAL
+// Adds more stock quantity to an existing product
+// In real MERN: PATCH /api/products/:id  { $inc: { quantity: n } }
+// ============================================================
+function openRestockModal(productId) {
+  currentProduct = products.find(p => p.id === productId);
+  document.getElementById('restock-name').textContent    = currentProduct.name;
+  document.getElementById('restock-current').textContent = currentProduct.quantity;
+  document.getElementById('restock-qty').value = '';
+  document.getElementById('restock-err').classList.add('hidden');
+  document.getElementById('restock-modal').classList.remove('hidden');
+}
+
+function confirmRestock() {
+  const qty = parseInt(document.getElementById('restock-qty').value);
+  if (!qty || qty < 1) {
+    document.getElementById('restock-err').classList.remove('hidden');
+    return;
+  }
+
+  // Add quantity (simulates MongoDB $inc operator)
+  products = products.map(p =>
+    p.id === currentProduct.id ? { ...p, quantity: p.quantity + qty } : p
+  );
+
+  closeModal('restock-modal');
+  renderAll();
+}
+
+
+// ============================================================
+// SECTION 13: DELETE PRODUCT MODAL
+// Permanently removes product from inventory
+// In real MERN: DELETE /api/products/:id → MongoDB deleteOne
+// ============================================================
+function openDeleteModal(productId) {
+  currentProduct = products.find(p => p.id === productId);
+  document.getElementById('delete-name').textContent = currentProduct.name;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+
+function confirmDelete() {
+  // Remove from array (simulates MongoDB deleteOne filter by _id)
+  products = products.filter(p => p.id !== currentProduct.id);
+  closeModal('delete-modal');
+  renderAll();
+}
+
+
+// ============================================================
+// SECTION 14: RENDER ALL
+// Called once after login and after every data change
+// Keeps all tabs in sync with latest product/sales data
+// ============================================================
+function renderAll() {
+  renderDashboard();
+  renderProducts();
+  renderSales();
+  renderAlerts();
+}
+</script>
+</body>
+</html>
